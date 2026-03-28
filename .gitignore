@@ -1,0 +1,10 @@
+# secrets
+.env
+**/.env
+*.key
+*.pem
+
+# dependencies/build
+node_modules/
+dist/
+build/
