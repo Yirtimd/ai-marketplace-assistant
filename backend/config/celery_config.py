@@ -78,6 +78,14 @@ class CeleryConfig:
             "task": "tasks.monitoring.check_stock_levels_task",
             "schedule": 30 * 60,  # 30 minutes in seconds
         },
+        # Stage 11 automation cycle every 15 minutes
+        "run-automation-cycle-every-15-min": {
+            "task": "tasks.automation.run_automation_cycle_task",
+            "schedule": 15 * 60,  # 15 minutes in seconds
+            "kwargs": {
+                "execute_actions": False
+            }
+        },
     }
 
 

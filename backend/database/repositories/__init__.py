@@ -14,6 +14,7 @@ from .stock_history import StockHistoryRepository, stock_history_repository
 from .rating_history import RatingHistoryRepository, rating_history_repository
 from .task_execution import TaskExecutionRepository, task_execution_repository
 from .workflow_state import WorkflowStateRepository, workflow_state_repository
+from .event import EventRepository, event_repository
 
 __all__ = [
     "BaseRepository",
@@ -35,4 +36,6 @@ __all__ = [
     "task_execution_repository",
     "WorkflowStateRepository",
     "workflow_state_repository",
+    "EventRepository",
+    "event_repository",
 ]

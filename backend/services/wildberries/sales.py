@@ -18,16 +18,19 @@ class WBSalesService(WBBaseService):
     async def get_sales(
         self,
         date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None
+        date_to: Optional[datetime] = None,
+        limit: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Get sales report"""
-        logger.info(f"Getting sales: date_from={date_from}, date_to={date_to}")
+        logger.info(f"Getting sales: date_from={date_from}, date_to={date_to}, limit={limit}")
         
         params = {}
         if date_from:
             params["dateFrom"] = date_from.isoformat()
         if date_to:
             params["dateTo"] = date_to.isoformat()
+        if limit is not None:
+            params["limit"] = limit
         
         response = await self._make_request(
             method="GET",
@@ -40,16 +43,19 @@ class WBSalesService(WBBaseService):
     async def get_orders(
         self,
         date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None
+        date_to: Optional[datetime] = None,
+        limit: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Get orders list"""
-        logger.info(f"Getting orders: date_from={date_from}, date_to={date_to}")
+        logger.info(f"Getting orders: date_from={date_from}, date_to={date_to}, limit={limit}")
         
         params = {}
         if date_from:
             params["dateFrom"] = date_from.isoformat()
         if date_to:
             params["dateTo"] = date_to.isoformat()
+        if limit is not None:
+            params["limit"] = limit
         
         response = await self._make_request(
             method="GET",

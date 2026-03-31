@@ -8,14 +8,10 @@ from typing import Optional
 
 from backend.config.dependencies import get_wb_sales_service
 from backend.services.wildberries import WBSalesService, WildberriesServiceError
-from backend.schemas.wb import (
-    SalesListResponse, OrdersListResponse, StocksListResponse
-)
-
 router = APIRouter(prefix="/sales", tags=["Sales & Reports"])
 
 
-@router.get("/", response_model=SalesListResponse)
+@router.get("/", response_model=dict)
 async def get_sales(
     date_from: Optional[datetime] = Query(None, description="Start date"),
     date_to: Optional[datetime] = Query(None, description="End date"),
@@ -29,12 +25,17 @@ async def get_sales(
     """
     try:
         data = await wb.get_sales(date_from=date_from, date_to=date_to, limit=limit)
-        return SalesListResponse(**data)
+        # Normalize response shape for both mock and real providers.
+        if "data" in data:
+            return data
+        if "sales" in data:
+            return {"data": data["sales"], "total": data.get("total", len(data["sales"]))}
+        return {"data": [], "total": 0, "raw": data}
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/orders", response_model=OrdersListResponse)
+@router.get("/orders", response_model=dict)
 async def get_orders(
     date_from: Optional[datetime] = Query(None, description="Start date"),
     date_to: Optional[datetime] = Query(None, description="End date"),
@@ -48,12 +49,16 @@ async def get_orders(
     """
     try:
         data = await wb.get_orders(date_from=date_from, date_to=date_to, limit=limit)
-        return OrdersListResponse(**data)
+        if "data" in data:
+            return data
+        if "orders" in data:
+            return {"data": data["orders"], "total": data.get("total", len(data["orders"]))}
+        return {"data": [], "total": 0, "raw": data}
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/stocks", response_model=StocksListResponse)
+@router.get("/stocks", response_model=dict)
 async def get_stocks(
     date_from: Optional[datetime] = Query(None, description="Start date"),
     wb: WBSalesService = Depends(get_wb_sales_service)
@@ -65,6 +70,10 @@ async def get_stocks(
     """
     try:
         data = await wb.get_stocks(date_from=date_from)
-        return StocksListResponse(**data)
+        if "data" in data:
+            return data
+        if "stocks" in data:
+            return {"data": data["stocks"], "total": data.get("total", len(data["stocks"]))}
+        return {"data": [], "total": 0, "raw": data}
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -98,7 +98,7 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
 
 ## Этап разработки
 
-Текущий этап: **Этап 9 - Action Layer**
+Текущий этап: **Этап 11 - Автоматизация**
 
 Реализовано:
 - ✅ Базовая инфраструктура backend
@@ -113,8 +113,11 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
 - ✅ Action Layer (`services/action_service.py`)
 - ✅ Action API endpoints (`/api/v1/actions/*`)
 - ✅ Выполнение действий из workflow через `execute_action`
+- ✅ Automation service (`services/automation_service.py`)
+- ✅ Automation task cycle (`tasks.automation.run_automation_cycle_task`)
+- ✅ Automation API endpoints (`/api/v1/automation/*`)
 
-Следующий этап: **Этап 10 - Desktop приложение**
+Следующий этап: **MVP завершен (этапы 1-11)**
 
 ## Лицензия
 

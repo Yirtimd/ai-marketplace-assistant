@@ -21,7 +21,8 @@ celery_app.config_from_object(celery_config)
 celery_app.autodiscover_tasks([
     "tasks.sync",
     "tasks.monitoring",
-    "tasks.analytics"
+    "tasks.analytics",
+    "tasks.automation",
 ])
 
 logger.info("Celery application initialized")

@@ -32,6 +32,7 @@ export default function App() {
   const [contentKeywords, setContentKeywords] = useState("термокружка, кружка для кофе");
 
   const appMeta = useMemo(() => window.desktop, []);
+  const activeSectionLabel = SECTIONS.find((item) => item.key === activeSection)?.label;
 
   async function runRequest<T>(fn: () => Promise<T>) {
     setLoading(true);
@@ -243,7 +244,10 @@ export default function App() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <h1>AI Marketplace Assistant</h1>
+        <div className="brand">
+          <h1>AI Marketplace Assistant</h1>
+          <p>Desktop Control Center</p>
+        </div>
         <nav>
           {SECTIONS.map((section) => (
             <button
@@ -258,14 +262,20 @@ export default function App() {
       </aside>
       <main className="main">
         <header className="main-header">
-          <h2>{SECTIONS.find((item) => item.key === activeSection)?.label}</h2>
+          <div>
+            <h2>{activeSectionLabel}</h2>
+            <p className="muted">Управление сценариями и интеграциями из единого интерфейса</p>
+          </div>
           {loading && <span className="muted">Loading...</span>}
         </header>
 
-        {renderSection()}
+        <section className="surface">{renderSection()}</section>
 
         {error && <p className="error">{error}</p>}
-        <JsonBlock data={payload} />
+        <section className="surface">
+          <h3 className="result-title">API response</h3>
+          <JsonBlock data={payload} />
+        </section>
       </main>
     </div>
   );

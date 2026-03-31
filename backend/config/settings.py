@@ -83,6 +83,21 @@ class Settings(BaseSettings):
     # Security settings
     secret_key: str = Field(description="Secret key for JWT and encryption")
     access_token_expire_minutes: int = Field(default=60, description="Access token expiration time")
+
+    # Automation settings (Stage 11)
+    automation_enabled: bool = Field(default=True, description="Enable automation cycle")
+    automation_execute_actions: bool = Field(
+        default=False,
+        description="Allow automation to execute marketplace actions",
+    )
+    automation_sales_drop_threshold_pct: float = Field(
+        default=25.0,
+        description="Sales drop threshold in percent for alerts",
+    )
+    automation_low_stock_threshold: int = Field(
+        default=10,
+        description="Stock threshold for low stock alerts",
+    )
     
     @property
     def celery_broker(self) -> str:
