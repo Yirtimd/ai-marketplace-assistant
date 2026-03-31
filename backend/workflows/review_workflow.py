@@ -20,7 +20,7 @@ class ReviewState(TypedDict):
     workflow_id: str
     shop_id: Optional[int]
     execute_action: bool
-    review_id: Optional[int]
+    review_id: Optional[Any]
     review_payload: Dict[str, Any]
     sentiment_payload: Dict[str, Any]
     ai_reply_payload: Dict[str, Any]
@@ -178,8 +178,8 @@ class ReviewWorkflow(BaseWorkflow):
             }
             return state
 
-        review_id = int(state["review_payload"].get("id", 0) or 0)
-        if review_id <= 0:
+        raw_review_id = state["review_payload"].get("id")
+        if raw_review_id is None or str(raw_review_id).strip() == "":
             state["publish_payload"] = {
                 "status": "missing_review_id",
                 "reply_text": state["reply_text"],
@@ -187,7 +187,7 @@ class ReviewWorkflow(BaseWorkflow):
             return state
 
         state["publish_payload"] = self.review_agent.publish_reply(
-            review_id=review_id,
+            review_id=raw_review_id,
             reply_text=state["reply_text"],
         )
         state["publish_payload"]["prepared_at"] = datetime.utcnow().isoformat()

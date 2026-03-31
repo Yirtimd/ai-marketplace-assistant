@@ -4,7 +4,7 @@ Review Agent
 Stateless agent for review sentiment analysis and reply drafting.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from config import get_logger
 
@@ -84,7 +84,7 @@ class ReviewAgent:
             f"для улучшения сервиса. С уважением, {shop_name}."
         )
 
-    def publish_reply(self, review_id: int, reply_text: str) -> Dict[str, Any]:
+    def publish_reply(self, review_id: Union[int, str], reply_text: str) -> Dict[str, Any]:
         """
         Prepare publish payload for external API/service layer.
 
@@ -92,7 +92,7 @@ class ReviewAgent:
         """
         logger.info("ReviewAgent prepared reply for review_id=%s", review_id)
         return {
-            "review_id": review_id,
+            "review_id": str(review_id),
             "reply_text": reply_text,
             "status": "ready_to_publish",
         }

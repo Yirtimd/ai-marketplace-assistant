@@ -8,8 +8,8 @@ from typing import Optional
 from backend.config.dependencies import get_wb_feedbacks_service
 from backend.services.wildberries import WBFeedbacksService, WildberriesServiceError
 from backend.schemas.wb import (
-    FeedbacksListResponse, Feedback, AnswerFeedbackRequest,
-    QuestionsListResponse, Question, AnswerQuestionRequest
+    AnswerFeedbackRequest,
+    AnswerQuestionRequest,
 )
 
 router = APIRouter(prefix="/feedbacks", tags=["Feedbacks & Questions"])
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/feedbacks", tags=["Feedbacks & Questions"])
 # Feedbacks
 # ============================================
 
-@router.get("/", response_model=FeedbacksListResponse)
+@router.get("/", response_model=dict)
 async def get_feedbacks(
     is_answered: Optional[bool] = Query(None, description="Filter by answered status"),
     take: int = Query(10000, ge=1, le=10000, description="Maximum number of feedbacks"),
@@ -32,13 +32,12 @@ async def get_feedbacks(
     Returns paginated list of feedbacks with optional filtering.
     """
     try:
-        data = await wb.get_feedbacks(is_answered=is_answered, take=take, skip=skip)
-        return FeedbacksListResponse(**data)
+        return await wb.get_feedbacks(is_answered=is_answered, take=take, skip=skip)
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{feedback_id}", response_model=Feedback)
+@router.get("/{feedback_id}", response_model=dict)
 async def get_feedback_by_id(
     feedback_id: str,
     wb: WBFeedbacksService = Depends(get_wb_feedbacks_service)
@@ -49,8 +48,7 @@ async def get_feedback_by_id(
     Returns detailed information about a specific feedback.
     """
     try:
-        data = await wb.get_feedback_by_id(feedback_id)
-        return Feedback(**data)
+        return await wb.get_feedback_by_id(feedback_id)
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -93,7 +91,7 @@ async def get_unanswered_feedbacks_count(
 # Questions
 # ============================================
 
-@router.get("/questions", response_model=QuestionsListResponse)
+@router.get("/questions", response_model=dict)
 async def get_questions(
     is_answered: Optional[bool] = Query(None, description="Filter by answered status"),
     take: int = Query(10000, ge=1, le=10000, description="Maximum number of questions"),
@@ -106,8 +104,7 @@ async def get_questions(
     Returns paginated list of questions with optional filtering.
     """
     try:
-        data = await wb.get_questions(is_answered=is_answered, take=take, skip=skip)
-        return QuestionsListResponse(**data)
+        return await wb.get_questions(is_answered=is_answered, take=take, skip=skip)
     except WildberriesServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

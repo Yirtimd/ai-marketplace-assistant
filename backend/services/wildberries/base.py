@@ -7,6 +7,7 @@ Provides common HTTP client functionality for all WB services.
 import httpx
 from typing import Dict, Any, Optional
 from backend.config import get_logger, settings
+from .exceptions import WildberriesRateLimitError
 
 logger = get_logger(__name__)
 
