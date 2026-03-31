@@ -2,7 +2,7 @@
 Pydantic models for Wildberries Products API
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 
@@ -25,7 +25,7 @@ class Photo(BaseModel):
 class Characteristic(BaseModel):
     """Product characteristic"""
     name: str = Field(..., description="Characteristic name")
-    value: str | List[str] = Field(..., description="Characteristic value")
+    value: Union[str, List[str]] = Field(..., description="Characteristic value")
 
 
 class Product(BaseModel):

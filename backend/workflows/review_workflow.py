@@ -46,7 +46,7 @@ class ReviewWorkflow(BaseWorkflow):
         workflow.add_node("generate_reply", self._generate_reply)
         workflow.add_node("moderation_check", self._moderation_check)
         workflow.add_node("publish_reply", self._publish_reply)
-        workflow.add_node("execute_action", self._execute_action)
+        workflow.add_node("execute_marketplace_action", self._execute_action)
         workflow.add_node("format_result", self._format_result)
 
         workflow.set_entry_point("load_review")
@@ -54,8 +54,8 @@ class ReviewWorkflow(BaseWorkflow):
         workflow.add_edge("sentiment_analysis", "generate_reply")
         workflow.add_edge("generate_reply", "moderation_check")
         workflow.add_edge("moderation_check", "publish_reply")
-        workflow.add_edge("publish_reply", "execute_action")
-        workflow.add_edge("execute_action", "format_result")
+        workflow.add_edge("publish_reply", "execute_marketplace_action")
+        workflow.add_edge("execute_marketplace_action", "format_result")
         workflow.add_edge("format_result", END)
         return workflow.compile()
 

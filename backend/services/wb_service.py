@@ -118,8 +118,10 @@ class WildberriesService:
             logger.error(f"WB API request timeout: {url}")
             raise WildberriesAPIError("Request timeout")
         except httpx.RequestError as e:
-            logger.error(f"WB API request error: {e}")
-            raise WildberriesAPIError(f"Request error: {str(e)}")
+            logger.error(f"WB API request error for {url}: {e}")
+            raise WildberriesAPIError(
+                f"Request error: {str(e)}. Check WB_API_URL={self.base_url}"
+            )
     
     # ============================================
     # Products Methods

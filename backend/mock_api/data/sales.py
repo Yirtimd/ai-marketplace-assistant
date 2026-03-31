@@ -4,7 +4,7 @@ Mock data generator for Wildberries Sales, Orders and Stocks
 
 from datetime import datetime, timedelta
 import random
-from typing import List
+from typing import List, Optional
 from ..models.sale import Sale, Order, Stock
 from .products import MOCK_PRODUCTS
 
@@ -167,7 +167,7 @@ MOCK_ORDERS = generate_orders(150)
 MOCK_STOCKS = generate_stocks()
 
 
-def get_sales(date_from: datetime | None = None, date_to: datetime | None = None) -> List[Sale]:
+def get_sales(date_from: Optional[datetime] = None, date_to: Optional[datetime] = None) -> List[Sale]:
     """Get sales with date filters"""
     sales = MOCK_SALES
     
@@ -180,7 +180,7 @@ def get_sales(date_from: datetime | None = None, date_to: datetime | None = None
     return sales
 
 
-def get_orders(date_from: datetime | None = None, date_to: datetime | None = None) -> List[Order]:
+def get_orders(date_from: Optional[datetime] = None, date_to: Optional[datetime] = None) -> List[Order]:
     """Get orders with date filters"""
     orders = MOCK_ORDERS
     

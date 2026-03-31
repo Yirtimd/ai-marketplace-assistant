@@ -43,8 +43,8 @@ Mock API полностью имитирует поведение реально
 ## Запуск
 
 ```bash
-cd backend/mock_api
-uvicorn main:app --reload --port 8001
+cd backend
+uvicorn mock_api.main:app --reload --port 8001
 ```
 
 Mock API будет доступен по адресу: http://localhost:8001

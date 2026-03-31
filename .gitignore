@@ -8,3 +8,18 @@
 node_modules/
 dist/
 build/
+
+# internal assistant artifacts
+.cursor/
+ready_files/
+
+# internal instruction/docs artifacts
+AGENTS.md
+ROADMAP.md
+ARCHITECTURE.md
+ARCHITECTURE_IMPROVEMENTS.md
+DEVELOPMENT_WORKFLOW.md
+IMPROVEMENTS_COMPLETE.md
+PROJECT_RULES.md
+TECH_STACK.md
+CHANGELOG_AGENT.md

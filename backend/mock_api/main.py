@@ -5,7 +5,14 @@ Main FastAPI application for Wildberries Mock API
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pathlib import Path
+import sys
 import time
+
+# Allow running from `backend/mock_api` as `uvicorn main:app`
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    __package__ = "mock_api"
 
 from .routers import products, feedbacks, sales
 
@@ -43,7 +50,7 @@ async def auth_middleware(request: Request, call_next):
     """Check authorization token"""
     
     # Skip auth for docs
-    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/"]:
+    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/", "/health"]:
         return await call_next(request)
     
     # Get auth header
@@ -78,7 +85,7 @@ async def rate_limit_middleware(request: Request, call_next):
     """Simple rate limiting"""
     
     # Skip rate limit for docs
-    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/"]:
+    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/", "/health"]:
         return await call_next(request)
     
     client_ip = request.client.host

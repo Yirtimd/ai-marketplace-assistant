@@ -4,7 +4,7 @@ Mock data generator for Wildberries Products
 
 from datetime import datetime, timedelta
 import random
-from typing import List
+from typing import List, Optional
 from ..models.product import (
     Product, Size, Photo, Characteristic,
     Category, Subject, Brand, SubjectCharacteristic,
@@ -180,7 +180,7 @@ def get_products(limit: int = 100, offset: int = 0) -> List[Product]:
     return MOCK_PRODUCTS[offset:offset + limit]
 
 
-def get_product_by_id(nm_id: int) -> Product | None:
+def get_product_by_id(nm_id: int) -> Optional[Product]:
     """Get product by nmID"""
     for product in MOCK_PRODUCTS:
         if product.nmID == nm_id:
@@ -188,7 +188,7 @@ def get_product_by_id(nm_id: int) -> Product | None:
     return None
 
 
-def get_product_by_vendor_code(vendor_code: str) -> Product | None:
+def get_product_by_vendor_code(vendor_code: str) -> Optional[Product]:
     """Get product by vendor code"""
     for product in MOCK_PRODUCTS:
         if product.vendorCode == vendor_code:

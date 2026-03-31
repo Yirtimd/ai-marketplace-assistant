@@ -6,6 +6,7 @@ This service provides health check functionality for all system components.
 
 from typing import Dict, Any
 from dataclasses import dataclass
+from sqlalchemy import text
 
 from backend.config import get_logger
 from backend.database import db_manager, redis_manager
@@ -43,8 +44,9 @@ class HealthService:
             Connection status: "connected", "disconnected", or "unknown"
         """
         try:
-            # Try to get database connection
-            db_manager.get_redis()
+            # Try lightweight SQL query through async session.
+            async with db_manager.get_async_session() as db:
+                await db.execute(text("SELECT 1"))
             logger.debug("Database health check: connected")
             return "connected"
         except Exception as e:

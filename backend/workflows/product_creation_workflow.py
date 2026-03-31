@@ -42,7 +42,7 @@ class ProductCreationWorkflow(BaseWorkflow):
         workflow.add_node("generate_video", self._generate_video)
         workflow.add_node("seo_optimization", self._seo_optimization)
         workflow.add_node("create_product_card", self._create_product_card_payload)
-        workflow.add_node("execute_action", self._execute_action)
+        workflow.add_node("execute_marketplace_action", self._execute_action)
         workflow.add_node("format_result", self._format_result)
 
         workflow.set_entry_point("generate_description")
@@ -50,8 +50,8 @@ class ProductCreationWorkflow(BaseWorkflow):
         workflow.add_edge("generate_images", "generate_video")
         workflow.add_edge("generate_video", "seo_optimization")
         workflow.add_edge("seo_optimization", "create_product_card")
-        workflow.add_edge("create_product_card", "execute_action")
-        workflow.add_edge("execute_action", "format_result")
+        workflow.add_edge("create_product_card", "execute_marketplace_action")
+        workflow.add_edge("execute_marketplace_action", "format_result")
         workflow.add_edge("format_result", END)
         return workflow.compile()
 

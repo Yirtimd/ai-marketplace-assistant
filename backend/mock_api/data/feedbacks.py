@@ -4,7 +4,7 @@ Mock data generator for Wildberries Feedbacks and Questions
 
 from datetime import datetime, timedelta
 import random
-from typing import List
+from typing import List, Optional
 from ..models.feedback import (
     Feedback, FeedbackAnswer, Question, QuestionAnswer
 )
@@ -153,7 +153,7 @@ MOCK_QUESTIONS = generate_questions(50)
 
 
 def get_feedbacks(
-    is_answered: bool | None = None,
+    is_answered: Optional[bool] = None,
     take: int = 10000,
     skip: int = 0
 ) -> List[Feedback]:
@@ -166,7 +166,7 @@ def get_feedbacks(
     return feedbacks[skip:skip + take]
 
 
-def get_feedback_by_id(feedback_id: str) -> Feedback | None:
+def get_feedback_by_id(feedback_id: str) -> Optional[Feedback]:
     """Get feedback by ID"""
     for feedback in MOCK_FEEDBACKS:
         if feedback.id == feedback_id:
@@ -175,7 +175,7 @@ def get_feedback_by_id(feedback_id: str) -> Feedback | None:
 
 
 def get_questions(
-    is_answered: bool | None = None,
+    is_answered: Optional[bool] = None,
     take: int = 10000,
     skip: int = 0
 ) -> List[Question]:
@@ -188,7 +188,7 @@ def get_questions(
     return questions[skip:skip + take]
 
 
-def get_question_by_id(question_id: str) -> Question | None:
+def get_question_by_id(question_id: str) -> Optional[Question]:
     """Get question by ID"""
     for question in MOCK_QUESTIONS:
         if question.id == question_id:

@@ -2,7 +2,7 @@
 Pydantic models for Wildberries Feedbacks and Questions API
 """
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
@@ -95,6 +95,3 @@ class NewFeedbacksQuestionsResponse(BaseModel):
 # Update forward references
 Feedback.model_rebuild()
 Question.model_rebuild()
-
-
-from typing import Dict, Any

@@ -48,7 +48,7 @@ class PricingWorkflow(BaseWorkflow):
         workflow.add_node("estimate_demand", self._estimate_demand)
         workflow.add_node("recommend_price", self._recommend_price)
         workflow.add_node("prepare_update_payload", self._prepare_update_payload)
-        workflow.add_node("execute_action", self._execute_action)
+        workflow.add_node("execute_marketplace_action", self._execute_action)
         workflow.add_node("format_result", self._format_result)
 
         workflow.set_entry_point("load_pricing_data")
@@ -56,8 +56,8 @@ class PricingWorkflow(BaseWorkflow):
         workflow.add_edge("analyze_competitor_prices", "estimate_demand")
         workflow.add_edge("estimate_demand", "recommend_price")
         workflow.add_edge("recommend_price", "prepare_update_payload")
-        workflow.add_edge("prepare_update_payload", "execute_action")
-        workflow.add_edge("execute_action", "format_result")
+        workflow.add_edge("prepare_update_payload", "execute_marketplace_action")
+        workflow.add_edge("execute_marketplace_action", "format_result")
         workflow.add_edge("format_result", END)
         return workflow.compile()
 
