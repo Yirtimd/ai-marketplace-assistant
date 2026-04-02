@@ -532,6 +532,7 @@ router = APIRouter(prefix="/api/v1", tags=["v1"])
 | 2026-03-28 | Этап 8: AI сервисы | Добавлен ai_service (DeepSeek/OpenAI/Anthropic), AI endpoints, интеграция в workflows | 0.8.0 |
 | 2026-03-28 | Этап 9: Action Layer | Добавлен action_service, action endpoints, execute_action в workflows | 0.9.0 |
 | 2026-03-28 | Этап 10: Desktop приложение | Добавлен desktop-app (Electron + React + Vite) с разделами Dashboard/Products/Reviews/Content AI/Inventory/Settings | 0.10.0 |
+| 2026-03-28 | Этап 11: Автоматизация | Добавлены automation service, automation tasks, scheduled automation cycle, automation API | 0.11.0 |
 
 ---
 

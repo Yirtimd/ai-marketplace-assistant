@@ -11,6 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_logger
 from services.wildberries import WBProductsService, WBFeedbacksService, WBSalesService
+from services.wildberries.normalizer import (
+    extract_feedbacks,
+    extract_products,
+    extract_sales,
+    normalize_feedback_record,
+    normalize_sale_record,
+)
 from database.repositories import (
     product_repository, 
     sale_repository, 
@@ -45,6 +52,7 @@ class DataSyncService:
         db: AsyncSession,
         shop_id: int,
         limit: int = 100,
+        offset: int = 0,
         track_history: bool = True
     ) -> Dict[str, Any]:
         """
@@ -57,6 +65,7 @@ class DataSyncService:
             db: Database session
             shop_id: Shop ID
             limit: Max products to fetch
+            offset: Offset for pagination
             track_history: Track price/stock/rating changes (default: True)
             
         Returns:
@@ -72,8 +81,8 @@ class DataSyncService:
         errors = 0
         
         try:
-            wb_response = await self.products_service.get_products(limit=limit)
-            wb_products = wb_response.get("cards", [])
+            wb_response = await self.products_service.get_products(limit=limit, offset=offset)
+            wb_products = extract_products(wb_response)
             
             for wb_product in wb_products:
                 try:
@@ -173,6 +182,8 @@ class DataSyncService:
                 "status": "completed",
                 "created": created,
                 "updated": updated,
+                "offset": offset,
+                "limit": limit,
                 "history_tracked": {
                     "price_changes": price_changes,
                     "stock_changes": stock_changes,
@@ -186,6 +197,8 @@ class DataSyncService:
             logger.error(f"Products sync failed: {e}")
             return {
                 "status": "failed",
+                "offset": offset,
+                "limit": limit,
                 "error": str(e)
             }
     
@@ -219,11 +232,12 @@ class DataSyncService:
         
         try:
             wb_response = await self.sales_service.get_sales(date_from=date_from, date_to=date_to)
-            wb_sales = wb_response.get("data", [])
+            wb_sales = extract_sales(wb_response)
             
             for wb_sale in wb_sales:
                 try:
-                    sale_id = wb_sale.get("saleID")
+                    normalized_sale = normalize_sale_record(wb_sale)
+                    sale_id = normalized_sale["sale_id"]
                     
                     # Check if sale already exists
                     existing_sale = await sale_repository.get_by_field(db, "sale_id", sale_id)
@@ -235,7 +249,7 @@ class DataSyncService:
                         continue
                     
                     # Get product
-                    nm_id = wb_sale.get("nmID")
+                    nm_id = normalized_sale["nm_id"]
                     product = await product_repository.get_by_nm_id(db, nm_id)
                     
                     if not product:
@@ -247,17 +261,17 @@ class DataSyncService:
                         "shop_id": shop_id,
                         "product_id": product.id,
                         "sale_id": sale_id,
-                        "order_id": wb_sale.get("orderID"),
+                        "order_id": normalized_sale["order_id"],
                         "nm_id": nm_id,
-                        "vendor_code": wb_sale.get("vendorCode"),
-                        "sale_date": wb_sale.get("date"),
-                        "quantity": wb_sale.get("quantity"),
-                        "price": wb_sale.get("price"),
-                        "discount": wb_sale.get("discount"),
-                        "total_price": wb_sale.get("totalPrice"),
-                        "warehouse_name": wb_sale.get("warehouseName"),
-                        "oblast": wb_sale.get("oblast"),
-                        "region": wb_sale.get("region"),
+                        "vendor_code": normalized_sale["vendor_code"],
+                        "sale_date": normalized_sale["sale_date"],
+                        "quantity": normalized_sale["quantity"],
+                        "price": normalized_sale["price"],
+                        "discount": normalized_sale["discount"],
+                        "total_price": normalized_sale["total_price"],
+                        "warehouse_name": normalized_sale["warehouse_name"],
+                        "oblast": normalized_sale["oblast"],
+                        "region": normalized_sale["region"],
                     }
                     
                     await sale_repository.create(db, sale_data)
@@ -313,12 +327,13 @@ class DataSyncService:
         
         try:
             wb_response = await self.feedbacks_service.get_feedbacks(is_answered=is_answered)
-            wb_feedbacks = wb_response.get("data", [])
+            wb_feedbacks = extract_feedbacks(wb_response)
             
             for wb_feedback in wb_feedbacks:
                 try:
-                    feedback_id = wb_feedback.get("id")
-                    nm_id = wb_feedback.get("nmId")
+                    normalized_feedback = normalize_feedback_record(wb_feedback)
+                    feedback_id = normalized_feedback["feedback_id"]
+                    nm_id = normalized_feedback["nm_id"]
                     
                     product = await product_repository.get_by_nm_id(db, nm_id)
                     if not product:
@@ -333,13 +348,13 @@ class DataSyncService:
                         "wb_feedback_id": feedback_id,
                         "nm_id": nm_id,
                         "review_type": "feedback",
-                        "text": wb_feedback.get("text"),
-                        "rating": wb_feedback.get("rating"),
-                        "user_name": wb_feedback.get("userName", "Покупатель"),
-                        "created_date": wb_feedback.get("createdAt"),
-                        "is_answered": wb_feedback.get("isAnswered", False),
-                        "answer_text": wb_feedback.get("answer", {}).get("text") if wb_feedback.get("answer") else None,
-                        "answered_at": wb_feedback.get("answer", {}).get("createdAt") if wb_feedback.get("answer") else None,
+                        "text": normalized_feedback["text"],
+                        "rating": normalized_feedback["rating"],
+                        "user_name": normalized_feedback["user_name"],
+                        "created_date": normalized_feedback["created_date"],
+                        "is_answered": normalized_feedback["is_answered"],
+                        "answer_text": normalized_feedback["answer_text"],
+                        "answered_at": normalized_feedback["answered_at"],
                     }
                     
                     if existing_review:

@@ -15,6 +15,7 @@ from workflows.base import BaseWorkflow
 
 class ProductCreationState(TypedDict):
     workflow_id: str
+    shop_id: Optional[int]
     execute_action: bool
     product_data: Dict[str, Any]
     description_payload: Dict[str, Any]
@@ -64,6 +65,7 @@ class ProductCreationWorkflow(BaseWorkflow):
     ) -> Dict[str, Any]:
         initial_state: ProductCreationState = {
             "workflow_id": workflow_id,
+            "shop_id": shop_id or context.get("shop_id"),
             "execute_action": bool(context.get("execute_action", False)),
             "product_data": dict(context.get("product_data", {})),
             "description_payload": {},
@@ -159,7 +161,8 @@ class ProductCreationWorkflow(BaseWorkflow):
 
         try:
             state["action_result"] = await action_service.create_product_card(
-                card_payload=state["card_payload"]
+                card_payload=state["card_payload"],
+                shop_id=state["shop_id"],
             )
         except Exception as exc:
             state["action_result"] = {"status": "failed", "error": str(exc)}

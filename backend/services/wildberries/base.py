@@ -7,24 +7,14 @@ Provides common HTTP client functionality for all WB services.
 import httpx
 from typing import Dict, Any, Optional
 from backend.config import get_logger, settings
-from .exceptions import WildberriesRateLimitError
+from .exceptions import (
+    WildberriesServiceError,
+    WildberriesAuthError,
+    WildberriesAPIError,
+    WildberriesRateLimitError,
+)
 
 logger = get_logger(__name__)
-
-
-class WildberriesServiceError(Exception):
-    """Base exception for Wildberries service errors"""
-    pass
-
-
-class WildberriesAuthError(WildberriesServiceError):
-    """Authentication error"""
-    pass
-
-
-class WildberriesAPIError(WildberriesServiceError):
-    """API request error"""
-    pass
 
 
 class WBBaseService:

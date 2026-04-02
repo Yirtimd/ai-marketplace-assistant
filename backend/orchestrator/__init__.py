@@ -14,6 +14,8 @@ from workflows.sales_analysis_workflow import SalesAnalysisWorkflow
 from workflows.product_creation_workflow import ProductCreationWorkflow
 from workflows.review_workflow import ReviewWorkflow
 from workflows.pricing_workflow import PricingWorkflow
+from workflows.ai_generation_workflow import AIGenerationWorkflow
+from workflows.action_execution_workflow import ActionExecutionWorkflow
 
 workflow_registry.register(
     name="check_inventory",
@@ -55,6 +57,20 @@ workflow_registry.register(
     workflow_class=PricingWorkflow,
     description="Analyze pricing context and suggest target price",
     category="pricing"
+)
+
+workflow_registry.register(
+    name="ai_generation_workflow",
+    workflow_class=AIGenerationWorkflow,
+    description="Execute direct AI generation operation through orchestrator",
+    category="ai",
+)
+
+workflow_registry.register(
+    name="action_execution_workflow",
+    workflow_class=ActionExecutionWorkflow,
+    description="Execute marketplace action through orchestrator workflow",
+    category="actions",
 )
 
 # Compatibility aliases used in existing event mappings

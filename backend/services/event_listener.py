@@ -6,7 +6,7 @@ Listens to system events and triggers appropriate actions (tasks, workflows).
 
 from typing import Optional
 from config import get_logger
-from database.models.event import Event, EventType
+from database.models.event import Event
 from tasks.monitoring import check_stock_levels_task
 
 logger = get_logger(__name__)
@@ -37,29 +37,39 @@ class EventListener:
         Args:
             event: System event
         """
-        logger.info(f"Processing event: {event.type}, level: {event.level}")
+        event_name = self._resolve_event_name(event)
+        logger.info("Processing event: event_name=%s level=%s", event_name, event.event_level)
         
         try:
             # Route event to appropriate handler
-            handler = self._get_handler(event.type)
+            handler = self._get_handler(event_name)
             if handler:
                 await handler(event)
             else:
-                logger.debug(f"No handler for event type: {event.type}")
+                logger.debug("No handler for event_name: %s", event_name)
         
         except Exception as e:
             logger.error(f"Failed to handle event {event.id}: {e}")
     
-    def _get_handler(self, event_type: EventType):
-        """Get handler method for event type"""
+    def _resolve_event_name(self, event: Event) -> str:
+        details = event.details or {}
+        if isinstance(details, dict):
+            name = details.get("event_name")
+            if isinstance(name, str) and name.strip():
+                return name.strip().upper()
+        return str(event.event_type).upper()
+
+    def _get_handler(self, event_name: str):
+        """Get handler method for event name"""
         handlers = {
-            EventType.LOW_STOCK: self.on_low_stock,
-            EventType.NEGATIVE_REVIEW: self.on_negative_review,
-            EventType.SYNC_COMPLETED: self.on_sync_completed,
-            EventType.SYNC_FAILED: self.on_sync_failed,
-            EventType.PRICE_CHANGED: self.on_price_changed,
+            "LOW_STOCK": self.on_low_stock,
+            "NEGATIVE_REVIEW": self.on_negative_review,
+            "SYNC_COMPLETED": self.on_sync_completed,
+            "SYNC_FAILED": self.on_sync_failed,
+            "PRICE_CHANGED": self.on_price_changed,
+            "SALES_DROP": self.on_sales_drop,
         }
-        return handlers.get(event_type)
+        return handlers.get(event_name)
     
     async def on_low_stock(self, event: Event):
         """
@@ -105,13 +115,12 @@ class EventListener:
         review_id = event.details.get("review_id")
         
         if shop_id:
-            # Stage 7: review workflow is available
-            # workflow_result = await self.orchestrator.execute_workflow(
-            #     workflow_name="review_workflow",
-            #     context={"shop_id": shop_id, "review_id": review_id},
-            #     shop_id=shop_id
-            # )
-            logger.info(f"Would trigger review response workflow for shop {shop_id}, review {review_id}")
+            workflow_result = await self.orchestrator.execute_workflow(
+                workflow_name="review_workflow",
+                context={"shop_id": shop_id, "review_id": review_id, "execute_action": False},
+                shop_id=shop_id
+            )
+            logger.info("Triggered review workflow: %s", workflow_result.get("workflow_id"))
     
     async def on_sync_completed(self, event: Event):
         """
@@ -156,21 +165,36 @@ class EventListener:
         new_price = event.details.get("new_price")
         
         if shop_id and product_id:
-            logger.info(
-                f"Product {product_id} price changed: {old_price} -> {new_price} "
-                f"for shop {shop_id}"
+            workflow_result = await self.orchestrator.execute_workflow(
+                workflow_name="pricing_workflow",
+                context={
+                    "shop_id": shop_id,
+                    "product_id": product_id,
+                    "current_price": new_price or old_price,
+                    "execute_action": False,
+                    "trigger": "price_changed_event",
+                },
+                shop_id=shop_id
             )
-            # Stage 7: pricing workflow is available
-            # workflow_result = await self.orchestrator.execute_workflow(
-            #     workflow_name="pricing_workflow",
-            #     context={
-            #         "shop_id": shop_id,
-            #         "product_id": product_id,
-            #         "old_price": old_price,
-            #         "new_price": new_price
-            #     },
-            #     shop_id=shop_id
-            # )
+            logger.info(
+                "Triggered pricing workflow for product=%s old_price=%s new_price=%s workflow_id=%s",
+                product_id,
+                old_price,
+                new_price,
+                workflow_result.get("workflow_id"),
+            )
+
+    async def on_sales_drop(self, event: Event):
+        """Handle sales drop event by triggering sales analysis workflow."""
+        shop_id = event.shop_id
+        if not shop_id:
+            return
+        workflow_result = await self.orchestrator.execute_workflow(
+            workflow_name="sales_analysis_workflow",
+            context={"shop_id": shop_id, "days_back": 14, "trigger": "sales_drop_event"},
+            shop_id=shop_id,
+        )
+        logger.info("Triggered sales_analysis workflow: %s", workflow_result.get("workflow_id"))
 
 
 # Singleton instance

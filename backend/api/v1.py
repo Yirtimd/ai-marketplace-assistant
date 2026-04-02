@@ -9,9 +9,14 @@ from fastapi import APIRouter, Depends
 from backend.config import settings, dependencies
 from backend.services.health_service import health_service
 from backend.api.routes import products, feedbacks, sales, ai, actions, automation
+from backend.api.security import require_api_access
 
 # Create v1 router
-router = APIRouter(prefix="/api/v1", tags=["v1"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["v1"],
+    dependencies=[Depends(require_api_access)],
+)
 
 
 @router.get("/")

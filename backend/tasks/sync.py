@@ -12,11 +12,27 @@ from database.repositories import shop_repository
 from services.wildberries import WBProductsService, WBFeedbacksService, WBSalesService
 from services.wildberries.exceptions import WildberriesServiceError, WildberriesRateLimitError
 from services.data_sync_service import DataSyncService
+from services.event_dispatcher import event_dispatcher
+from database.models.event import EventLevel, EventType
 from tasks.singleton import SingletonTask
 from tasks.workflow_aware import WorkflowAwareTask
 import httpx
 
 logger = get_logger(__name__)
+
+
+def _build_shop_scoped_wb_services(shop) -> tuple[WBProductsService, WBFeedbacksService, WBSalesService]:
+    """
+    Build Wildberries services bound to a specific shop credentials.
+
+    This prevents cross-tenant data mix when multiple shops are synced.
+    """
+    api_key = shop.wb_api_key
+    return (
+        WBProductsService(api_key=api_key),
+        WBFeedbacksService(api_key=api_key),
+        WBSalesService(api_key=api_key),
+    )
 
 
 class DatabaseTask(Task):
@@ -46,6 +62,28 @@ class WorkflowDatabaseTask(WorkflowAwareTask, SingletonTask, DatabaseTask):
     - Database session management
     """
     pass
+
+
+async def _emit_sync_event(
+    *,
+    event_name: str,
+    shop_id: int,
+    title: str,
+    message: str,
+    level: EventLevel,
+    details: dict,
+):
+    await event_dispatcher.emit(
+        event_name=event_name,
+        event_type=EventType.DATA_SYNC,
+        level=level,
+        shop_id=shop_id,
+        title=title,
+        message=message,
+        details=details,
+        source="tasks.sync",
+        dispatch=True,
+    )
 
 
 @celery_app.task(
@@ -83,10 +121,10 @@ async def sync_products_task(
     
     try:
         async with db_manager.get_async_session() as db:
-            # Initialize services
-            products_service = WBProductsService()
-            feedbacks_service = WBFeedbacksService()
-            sales_service = WBSalesService()
+            shop = await shop_repository.get_by_id(db, int(shop_id))
+            if not shop:
+                raise ValueError(f"Shop not found: {shop_id}")
+            products_service, feedbacks_service, sales_service = _build_shop_scoped_wb_services(shop)
             
             sync_service = DataSyncService(
                 products_service=products_service,
@@ -103,6 +141,7 @@ async def sync_products_task(
                 db=db,
                 shop_id=shop_id,
                 limit=current_chunk_size,
+                offset=offset,
                 track_history=True
             )
             
@@ -127,10 +166,32 @@ async def sync_products_task(
             result["chunk_size"] = current_chunk_size
             
             logger.info(f"sync_products_task completed for shop {shop_id}: {result}")
+            await _emit_sync_event(
+                event_name="SYNC_COMPLETED",
+                shop_id=shop_id,
+                title="Products sync completed",
+                message=f"Products sync finished for shop {shop_id}",
+                level=EventLevel.INFO,
+                details={
+                    "task_name": "sync_products_task",
+                    "result": result,
+                },
+            )
             return result
     
     except Exception as e:
         logger.error(f"sync_products_task failed for shop {shop_id}: {e}")
+        await _emit_sync_event(
+            event_name="SYNC_FAILED",
+            shop_id=shop_id,
+            title="Products sync failed",
+            message=f"Products sync failed for shop {shop_id}",
+            level=EventLevel.ERROR,
+            details={
+                "task_name": "sync_products_task",
+                "error": str(e),
+            },
+        )
         raise
 
 
@@ -161,10 +222,10 @@ async def sync_sales_task(self, shop_id: int, days_back: int = 7) -> dict:
         from datetime import datetime, timedelta
         
         async with db_manager.get_async_session() as db:
-            # Initialize services
-            products_service = WBProductsService()
-            feedbacks_service = WBFeedbacksService()
-            sales_service = WBSalesService()
+            shop = await shop_repository.get_by_id(db, int(shop_id))
+            if not shop:
+                raise ValueError(f"Shop not found: {shop_id}")
+            products_service, feedbacks_service, sales_service = _build_shop_scoped_wb_services(shop)
             
             sync_service = DataSyncService(
                 products_service=products_service,
@@ -185,10 +246,32 @@ async def sync_sales_task(self, shop_id: int, days_back: int = 7) -> dict:
             )
             
             logger.info(f"sync_sales_task completed for shop {shop_id}: {result}")
+            await _emit_sync_event(
+                event_name="SYNC_COMPLETED",
+                shop_id=shop_id,
+                title="Sales sync completed",
+                message=f"Sales sync finished for shop {shop_id}",
+                level=EventLevel.INFO,
+                details={
+                    "task_name": "sync_sales_task",
+                    "result": result,
+                },
+            )
             return result
     
     except Exception as e:
         logger.error(f"sync_sales_task failed for shop {shop_id}: {e}")
+        await _emit_sync_event(
+            event_name="SYNC_FAILED",
+            shop_id=shop_id,
+            title="Sales sync failed",
+            message=f"Sales sync failed for shop {shop_id}",
+            level=EventLevel.ERROR,
+            details={
+                "task_name": "sync_sales_task",
+                "error": str(e),
+            },
+        )
         raise
 
 
@@ -217,10 +300,10 @@ async def sync_reviews_task(self, shop_id: int, is_answered: bool = None) -> dic
     
     try:
         async with db_manager.get_async_session() as db:
-            # Initialize services
-            products_service = WBProductsService()
-            feedbacks_service = WBFeedbacksService()
-            sales_service = WBSalesService()
+            shop = await shop_repository.get_by_id(db, int(shop_id))
+            if not shop:
+                raise ValueError(f"Shop not found: {shop_id}")
+            products_service, feedbacks_service, sales_service = _build_shop_scoped_wb_services(shop)
             
             sync_service = DataSyncService(
                 products_service=products_service,
@@ -236,10 +319,32 @@ async def sync_reviews_task(self, shop_id: int, is_answered: bool = None) -> dic
             )
             
             logger.info(f"sync_reviews_task completed for shop {shop_id}: {result}")
+            await _emit_sync_event(
+                event_name="SYNC_COMPLETED",
+                shop_id=shop_id,
+                title="Reviews sync completed",
+                message=f"Reviews sync finished for shop {shop_id}",
+                level=EventLevel.INFO,
+                details={
+                    "task_name": "sync_reviews_task",
+                    "result": result,
+                },
+            )
             return result
     
     except Exception as e:
         logger.error(f"sync_reviews_task failed for shop {shop_id}: {e}")
+        await _emit_sync_event(
+            event_name="SYNC_FAILED",
+            shop_id=shop_id,
+            title="Reviews sync failed",
+            message=f"Reviews sync failed for shop {shop_id}",
+            level=EventLevel.ERROR,
+            details={
+                "task_name": "sync_reviews_task",
+                "error": str(e),
+            },
+        )
         raise
 
 

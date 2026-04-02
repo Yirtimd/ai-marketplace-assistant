@@ -213,6 +213,7 @@ class ReviewWorkflow(BaseWorkflow):
             state["action_result"] = await action_service.reply_to_review(
                 review_id=review_id,
                 reply_text=reply_text,
+                shop_id=state["shop_id"],
             )
         except Exception as exc:
             state["action_result"] = {"status": "failed", "error": str(exc)}

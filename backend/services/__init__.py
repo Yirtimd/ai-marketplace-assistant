@@ -17,6 +17,7 @@ from .wildberries import (
 from .task_service import task_service, TaskService
 from .ai_service import ai_service, AIService, AIServiceError, AIConfigurationError
 from .action_service import action_service, ActionService
+from .event_dispatcher import event_dispatcher, EventDispatcher
 
 __all__ = [
     "health_service", "HealthService", "HealthStatus",
@@ -35,4 +36,6 @@ __all__ = [
     "AIConfigurationError",
     "action_service",
     "ActionService",
+    "event_dispatcher",
+    "EventDispatcher",
 ]

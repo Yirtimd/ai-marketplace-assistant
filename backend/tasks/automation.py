@@ -7,11 +7,16 @@ Celery tasks for Stage 11 automation cycle.
 from celery_app import celery_app
 from config import get_logger
 from services.automation_service import automation_service
+from tasks.singleton import SingletonTask
 
 logger = get_logger(__name__)
 
 
-@celery_app.task(bind=True, name="tasks.automation.run_automation_cycle_task")
+@celery_app.task(
+    bind=True,
+    base=SingletonTask,
+    name="tasks.automation.run_automation_cycle_task",
+)
 async def run_automation_cycle_task(
     self,
     shop_id: int = None,

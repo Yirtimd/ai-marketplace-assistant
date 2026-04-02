@@ -9,18 +9,50 @@ Stage 11 automation orchestration:
 
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 from config import get_logger, settings
 from database import db_manager
+from database.redis_connection import redis_manager
 from database.models.event import EventLevel, EventType
-from database.repositories import event_repository, product_repository, sale_repository, shop_repository
+from database.repositories import product_repository, sale_repository, shop_repository
 from orchestrator import orchestrator
+from services.event_dispatcher import event_dispatcher
 
 logger = get_logger(__name__)
 
 
 class AutomationService:
     """Service for periodic automation cycle."""
+    LOCK_TTL_SECONDS = 20 * 60
+
+    def _lock_key_for_shop(self, shop_id: int) -> str:
+        return f"automation:shop:{shop_id}:lock"
+
+    def _global_lock_key(self) -> str:
+        return "automation:all:lock"
+
+    def _acquire_lock(self, key: str, owner_token: str) -> bool:
+        """
+        Acquire Redis lock with TTL.
+
+        Returns:
+            True if lock acquired, False otherwise.
+        """
+        redis_client = redis_manager.get_redis()
+        return bool(redis_client.set(key, owner_token, nx=True, ex=self.LOCK_TTL_SECONDS))
+
+    def _release_lock(self, key: str, owner_token: str) -> None:
+        """
+        Release lock only when owner token matches.
+        """
+        try:
+            redis_client = redis_manager.get_redis()
+            current_owner = redis_client.get(key)
+            if current_owner == owner_token:
+                redis_client.delete(key)
+        except Exception as exc:
+            logger.warning("Failed to release automation lock %s: %s", key, exc)
 
     async def run_automation_cycle(
         self,
@@ -39,30 +71,68 @@ class AutomationService:
             else bool(execute_actions)
         )
 
-        async with db_manager.get_async_session() as db:
-            if shop_id is not None:
-                shops = []
-                shop = await shop_repository.get_by_id(db, int(shop_id))
-                if shop:
-                    shops.append(shop)
-            else:
-                shops = await shop_repository.get_all(db, skip=0, limit=1000)
+        global_owner = str(uuid4())
+        if shop_id is None:
+            global_key = self._global_lock_key()
+            if not self._acquire_lock(global_key, global_owner):
+                return {
+                    "status": "skipped",
+                    "reason": "automation_cycle_already_running",
+                    "scope": "all",
+                }
+        else:
+            global_key = None
 
-        cycle_results: List[Dict[str, Any]] = []
-        for shop in shops:
-            result = await self._evaluate_shop(
-                shop_id=shop.id,
-                shop_name=shop.name,
-                execute_actions=effective_execute_actions,
-            )
-            cycle_results.append(result)
+        try:
+            async with db_manager.get_async_session() as db:
+                if shop_id is not None:
+                    shops = []
+                    shop = await shop_repository.get_by_id(db, int(shop_id))
+                    if shop:
+                        shops.append(shop)
+                else:
+                    shops = await shop_repository.get_all(db, skip=0, limit=1000)
 
-        return {
-            "status": "completed",
-            "shops_processed": len(cycle_results),
-            "execute_actions": effective_execute_actions,
-            "results": cycle_results,
-        }
+            cycle_results: List[Dict[str, Any]] = []
+            locked_shops = 0
+            skipped_shops = 0
+            for shop in shops:
+                shop_owner = str(uuid4())
+                shop_lock_key = self._lock_key_for_shop(shop.id)
+                if not self._acquire_lock(shop_lock_key, shop_owner):
+                    skipped_shops += 1
+                    cycle_results.append(
+                        {
+                            "shop_id": shop.id,
+                            "shop_name": shop.name,
+                            "status": "skipped",
+                            "reason": "shop_automation_already_running",
+                        }
+                    )
+                    continue
+
+                locked_shops += 1
+                try:
+                    result = await self._evaluate_shop(
+                        shop_id=shop.id,
+                        shop_name=shop.name,
+                        execute_actions=effective_execute_actions,
+                    )
+                    cycle_results.append(result)
+                finally:
+                    self._release_lock(shop_lock_key, shop_owner)
+
+            return {
+                "status": "completed",
+                "shops_processed": len(cycle_results),
+                "shops_locked": locked_shops,
+                "shops_skipped_by_lock": skipped_shops,
+                "execute_actions": effective_execute_actions,
+                "results": cycle_results,
+            }
+        finally:
+            if global_key is not None:
+                self._release_lock(global_key, global_owner)
 
     async def _evaluate_shop(
         self,
@@ -83,6 +153,7 @@ class AutomationService:
             workflows_triggered.append(
                 await self._trigger_workflow(
                     workflow_name="sales_analysis_workflow",
+                    event_name="SALES_DROP",
                     context={"shop_id": shop_id, "days_back": 14, "trigger": "sales_drop_automation"},
                     shop_id=shop_id,
                     title="Sales drop detected",
@@ -99,6 +170,7 @@ class AutomationService:
             workflows_triggered.append(
                 await self._trigger_workflow(
                     workflow_name="inventory_workflow",
+                    event_name="LOW_STOCK",
                     context={
                         "shop_id": shop_id,
                         "threshold": settings.automation_low_stock_threshold,
@@ -119,6 +191,7 @@ class AutomationService:
             workflows_triggered.append(
                 await self._trigger_workflow(
                     workflow_name="pricing_workflow",
+                    event_name="PRICE_CHANGED",
                     context={
                         "shop_id": shop_id,
                         "product_id": pricing_trigger.get("product_id"),
@@ -258,6 +331,7 @@ class AutomationService:
     async def _trigger_workflow(
         self,
         workflow_name: str,
+        event_name: str,
         context: Dict[str, Any],
         shop_id: int,
         title: str,
@@ -274,7 +348,8 @@ class AutomationService:
             shop_id=shop_id,
         )
 
-        await self._create_event(
+        event_meta = await self._create_event(
+            event_name=event_name,
             shop_id=shop_id,
             title=title,
             message=message,
@@ -290,36 +365,36 @@ class AutomationService:
             "workflow_name": workflow_name,
             "workflow_id": workflow_result.get("workflow_id"),
             "status": workflow_result.get("status"),
+            "event": event_meta,
         }
 
     async def _create_event(
         self,
+        event_name: str,
         shop_id: int,
         title: str,
         message: str,
         level: EventLevel,
         details: Dict[str, Any],
-    ) -> None:
+    ) -> Dict[str, Any]:
         """
-        Persist automation event notification.
+        Persist and dispatch automation event notification.
         """
         try:
-            async with db_manager.get_async_session() as db:
-                await event_repository.create(
-                    db,
-                    {
-                        "shop_id": shop_id,
-                        "event_type": EventType.NOTIFICATION,
-                        "event_level": level,
-                        "title": title,
-                        "message": message,
-                        "details": details,
-                        "source": "automation_service",
-                        "event_time": datetime.utcnow(),
-                    },
-                )
+            return await event_dispatcher.emit(
+                event_name=event_name,
+                event_type=EventType.NOTIFICATION,
+                level=level,
+                shop_id=shop_id,
+                title=title,
+                message=message,
+                details=details,
+                source="automation_service",
+                dispatch=True,
+            )
         except Exception as exc:
             logger.warning("Failed to store automation event for shop %s: %s", shop_id, exc)
+            return {"event_name": event_name, "dispatched": False}
 
 
 # Singleton instance

@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     # Security settings
     secret_key: str = Field(description="Secret key for JWT and encryption")
     access_token_expire_minutes: int = Field(default=60, description="Access token expiration time")
+    auth_allow_all: bool = Field(
+        default=True,
+        description="Temporary dev mode: allow all API requests without auth",
+    )
+    auth_test_token: str = Field(
+        default="dev-test-token",
+        description="Static token for temporary bearer auth mode",
+    )
 
     # Automation settings (Stage 11)
     automation_enabled: bool = Field(default=True, description="Enable automation cycle")

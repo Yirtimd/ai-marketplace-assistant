@@ -197,6 +197,7 @@ class PricingWorkflow(BaseWorkflow):
                 nm_id=int(state["update_payload"]["product_id"]),
                 new_price=float(state["update_payload"]["new_price"]),
                 reason=state["update_payload"].get("reason"),
+                shop_id=state["shop_id"],
             )
         except Exception as exc:
             state["action_result"] = {"status": "failed", "error": str(exc)}
